@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kiểm Kê Thanh Lý 2026 - HQKV4 (QR Scanner)</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<style>
+  :root {
+    --primary: #0f172a;
+    --accent: #2563eb;
+    --success: #16a34a;
+    --success-bg: #f0fdf4;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --border: #cbd5e1;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 88px;
+  }
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--primary);
+    color: #fff;
+    padding: 12px 12px 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .title {
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  .badge-count {
+    background: #16a34a;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #22c55e;
+    width: 0%;
+    transition: width 0.25s ease;
+  }
+  .search-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+  .search-input {
+    width: 100%;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    padding: 0 38px 0 12px;
+    font-size: 15.5px;
+    background: #fff;
+    color: #0f172a;
+    outline: none;
+  }
+  .clear-btn {
+    position: absolute;
+    right: 6px;
+    background: #e2e8f0;
+    border: none;
+    color: #334155;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: bold;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .qr-btn {
+    height: 44px;
+    padding: 0 11px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .qr-cam-btn {
+    background: #2563eb;
+    color: #fff;
+  }
+  .qr-img-btn {
+    background: #334155;
+    color: #fff;
+  }
+  .qr-banner {
+    display: none;
+    margin-top: 8px;
+    background: rgba(37, 99, 235, 0.25);
+    border: 1px solid rgba(147, 197, 253, 0.5);
+    color: #e0f2fe;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .qr-banner code {
+    color: #fde047;
+    font-weight: 700;
+    word-break: break-all;
+  }
+  .filters {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 12px 4px;
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .chip {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .status-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px 12px 8px;
+  }
+  .stab {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 8px;
+    background: #e2e8f0;
+    color: #475569;
+    border: none;
+    cursor: pointer;
+  }
+  .stab.active {
+    background: #0f172a;
+    color: #fff;
+  }
+  .list {
+    padding: 4px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 0.15s ease;
+  }
+  .card.checked {
+    background: var(--success-bg);
+    border-color: #86efac;
+  }
+  .card.highlight-match {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .tl-badge {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.3px;
+  }
+  .team-tag {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .team-TH { background: #dcfce7; color: #166534; }
+  .team-GS { background: #fef3c7; color: #92400e; }
+  .team-QLT { background: #f3e8ff; color: #6b21a8; }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .meta-pill {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .sn-pill {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+  }
+  .asset-name {
+    font-size: 14px;
+    line-height: 1.38;
+    color: #1e293b;
+    margin-bottom: 10px;
+  }
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .check-btn {
+    flex: 1;
+    height: 40px;
+    border-radius: 9px;
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .card.checked .check-btn {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+  }
+  .note-btn {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .note-text {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: #b45309;
+    background: #fffbeb;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px dashed #fcd34d;
+  }
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #cbd5e1;
+    padding: 10px 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 50;
+  }
+  .action-btn {
+    flex: 1;
+    height: 42px;
+    border-radius: 9px;
+    border: none;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-export {
+    background: #0f172a;
+    color: #fff;
+  }
+  .btn-copy {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  .empty {
+    text-align: center;
+    padding: 36px 16px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  /* QR Scanner Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.82);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-box {
+    background: #fff;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    background: #0f172a;
+    color: #fff;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .modal-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .modal-body {
+    padding: 14px;
+  }
+  #qr-reader {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+  }
+  .modal-tip {
+    font-size: 12.5px;
+    color: #475569;
+    text-align: center;
+    margin: 10px 0 6px;
+    line-height: 1.4;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .modal-btn {
+    flex: 1;
+    height: 40px;
+    border-radius: 9px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+  .modal-btn.primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="title">KIỂM KÊ THANH LÝ 2026 - KV4</div>
+    <div class="badge-count" id="counterBadge">0 / 128</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="search-row">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="Gõ Mã TS, Serial (vd: 5398) hoặc tên..." autocomplete="off">
+      <button id="clearBtn" class="clear-btn" aria-label="Xóa">✕</button>
+    </div>
+    <button class="qr-btn qr-cam-btn" onclick="openCameraScanner()" title="Quét QR bằng Camera">📷 Quét QR</button>
+    <button class="qr-btn qr-img-btn" onclick="triggerImageUpload()" title="Tải ảnh QR từ máy">🖼️ Ảnh QR</button>
+    <input type="file" id="qrFileInput" accept="image/*" style="display:none" onchange="handleQrImageFile(event)">
+  </div>
+  <div class="qr-banner" id="qrBanner">
+    <span id="qrBannerText">Nội dung QR: <code></code></span>
+    <button onclick="hideQrBanner()" style="background:none;border:none;color:#fff;font-weight:bold;cursor:pointer;">✕</button>
+  </div>
+</div>
+
+<div class="filters" id="teamFilters">
+  <button class="chip active" data-team="ALL">Tất cả (128)</button>
+  <button class="chip" data-team="TH">Đội TH (28)</button>
+  <button class="chip" data-team="TT">Đội TT (54)</button>
+  <button class="chip" data-team="GS">Đội GS (32)</button>
+  <button class="chip" data-team="QLT">QLT (14)</button>
+</div>
+
+<div class="status-tabs" id="statusTabs">
+  <button class="stab active" data-status="ALL">Tất cả</button>
+  <button class="stab" data-status="UNCHECKED">Chưa dán (<span id="uncheckCnt">128</span>)</button>
+  <button class="stab" data-status="CHECKED">Đã dán (<span id="checkCnt">0</span>)</button>
+</div>
+
+<div class="list" id="assetList"></div>
+
+<div class="bottom-bar">
+  <button class="action-btn btn-copy" onclick="copyReport()">📋 Copy báo cáo</button>
+  <button class="action-btn btn-export" onclick="exportCSV()">⬇️ Xuất Excel (CSV)</button>
+</div>
+
+<!-- Camera QR Modal -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>📷 Quét mã QR Tài sản</span>
+      <button class="modal-close" onclick="closeCameraScanner()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="qr-reader"></div>
+      <div class="modal-tip" id="scannerStatus">Đưa mã QR trên tem tài sản vào khung hình để tự động nhận diện Mã TS / Serial.</div>
+      <div class="modal-actions">
+        <button class="modal-btn primary" onclick="closeCameraScanner(); triggerImageUpload();">🖼️ Chọn ảnh QR từ thư viện</button>
+        <button class="modal-btn" onclick="closeCameraScanner()">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="qr-file-reader-hidden" style="display:none;"></div>
+
+<script>
+const ASSETS = [{"id": 1, "tl": "TL-001", "loai": "TSCĐ", "ma": "000144594", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3007", "sn": "QV985av3007", "sn_src": "col", "doi": "TH", "vt": "TH (kho)"}, {"id": 2, "tl": "TL-002", "loai": "TSCĐ", "ma": "000144661", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính hiệu HP ProDesk 600 GI (Không MH) (5398)", "sn": "5398", "sn_src": "col", "doi": "TH", "vt": "TH (kho)"}, {"id": 3, "tl": "TL-003", "loai": "TSCĐ", "ma": "000144622", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG CO MAN HINH TEM (6122)", "sn": "6122", "sn_src": "col", "doi": "TH", "vt": "TH (kho)"}, {"id": 4, "tl": "TL-004", "loai": "TSCĐ", "ma": "000144623", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG MAN HINH TEM TS(6125)", "sn": "6125", "sn_src": "col", "doi": "TH", "vt": "TH (kho)"}, {"id": 5, "tl": "TL-005", "loai": "TSCĐ", "ma": "000144624", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 G1KHONG MAN HINHTEM TS(6126)", "sn": "6126", "sn_src": "col", "doi": "TH", "vt": "TH (internet)"}, {"id": 6, "tl": "TL-006", "loai": "TSCĐ", "ma": "000144633", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG MAN HINH TEM (6135)", "sn": "6135", "sn_src": "col", "doi": "TH", "vt": "TH (A Thuật)"}, {"id": 7, "tl": "TL-007", "loai": "TSCĐ", "ma": "000144587", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3003", "sn": "QV985av3003", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 8, "tl": "TL-008", "loai": "TSCĐ", "ma": "000144588", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3004", "sn": "QV985av3004", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 9, "tl": "TL-009", "loai": "TSCĐ", "ma": "000144647", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính hiệu HP ProDesk 600 GI (Không MH) (5390)", "sn": "5390", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 10, "tl": "TL-010", "loai": "TSCĐ", "ma": "000144649", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính hiệu HP ProDesk 600 GI (Không MH) (5389)", "sn": "5389", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 11, "tl": "TL-011", "loai": "TSCĐ", "ma": "000144650", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính hiệu HP ProDesk 600 GI (Không MH) (5391)", "sn": "5391", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 12, "tl": "TL-012", "loai": "TSCĐ", "ma": "000144651", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính hiệu HP ProDesk 600 GI (Không MH) (5405)", "sn": "5405", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 13, "tl": "TL-013", "loai": "TSCĐ", "ma": "000144644", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG MAN HINH TEM TS(6117)", "sn": "6117", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 14, "tl": "TL-014", "loai": "TSCĐ", "ma": "000144668", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3029", "sn": "QV985av3029", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 15, "tl": "TL-015", "loai": "TSCĐ", "ma": "000144669", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3030", "sn": "QV985av3030", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 16, "tl": "TL-016", "loai": "TSCĐ", "ma": "000144520", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3031", "sn": "QV985av3031", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 17, "tl": "TL-017", "loai": "TSCĐ", "ma": "000144581", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3032", "sn": "QV985av3032", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 18, "tl": "TL-018", "loai": "TSCĐ", "ma": "000144582", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3033", "sn": "QV985av3033", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 19, "tl": "TL-019", "loai": "TSCĐ", "ma": "000144583", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3034", "sn": "QV985av3034", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 20, "tl": "TL-020", "loai": "TSCĐ", "ma": "000144590", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3036", "sn": "QV985av3036", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 21, "tl": "TL-021", "loai": "TSCĐ", "ma": "000144591", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3037", "sn": "QV985av3037", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 22, "tl": "TL-022", "loai": "TSCĐ", "ma": "000144592", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3038", "sn": "QV985av3038", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 23, "tl": "TL-023", "loai": "TSCĐ", "ma": "000144593", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3039", "sn": "QV985av3039", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 24, "tl": "TL-024", "loai": "TSCĐ", "ma": "000144498", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3040", "sn": "QV985av3040", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 25, "tl": "TL-025", "loai": "TSCĐ", "ma": "000144499", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3041", "sn": "QV985av3041", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 26, "tl": "TL-026", "loai": "TSCĐ", "ma": "000144500", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3042", "sn": "QV985av3042", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 27, "tl": "TL-027", "loai": "TSCĐ", "ma": "000144501", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3043", "sn": "QV985av3043", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 28, "tl": "TL-028", "loai": "TSCĐ", "ma": "000144502", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3044", "sn": "QV985av3044", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 29, "tl": "TL-029", "loai": "TSCĐ", "ma": "000144503", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3045", "sn": "QV985av3045", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 30, "tl": "TL-030", "loai": "TSCĐ", "ma": "000144607", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Máy vi tính trạm Dell 7010 - 12137", "sn": "12137", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 31, "tl": "TL-031", "loai": "TSCĐ", "ma": "000144608", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Máy vi tính trạm Dell 7010 - 12138", "sn": "12138", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 32, "tl": "TL-032", "loai": "TSCĐ", "ma": "000144596", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3009", "sn": "QV985av3009", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 33, "tl": "TL-033", "loai": "TSCĐ", "ma": "000144494", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3013", "sn": "QV985av3013", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 34, "tl": "TL-034", "loai": "TSCĐ", "ma": "000144495", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3014", "sn": "QV985av3014", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 35, "tl": "TL-035", "loai": "TSCĐ", "ma": "000144496", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3015", "sn": "QV985av3015", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 36, "tl": "TL-036", "loai": "TSCĐ", "ma": "000144497", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3016", "sn": "QV985av3016", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 37, "tl": "TL-037", "loai": "TSCĐ", "ma": "000144505", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3017", "sn": "QV985av3017", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 38, "tl": "TL-038", "loai": "TSCĐ", "ma": "000144506", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3018", "sn": "QV985av3018", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 39, "tl": "TL-039", "loai": "TSCĐ", "ma": "000144662", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính hiệu HP ProDesk 600 GI (Không MH) (5392)", "sn": "5392", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 40, "tl": "TL-040", "loai": "TSCĐ", "ma": "000144626", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG MAN HINH TEM TS(6128)", "sn": "6128", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 41, "tl": "TL-041", "loai": "TSCĐ", "ma": "000144627", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG MAN HINH TEM TS(6129)", "sn": "6129", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 42, "tl": "TL-042", "loai": "TSCĐ", "ma": "000144616", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy tính xách tay (Laptop)", "ten": "Máy tính xách tay SONY VAIO SVE15114 FXS - 36600", "sn": "36600", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 43, "tl": "TL-043", "loai": "TSCĐ", "ma": "000146421", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2 HP (5217)", "sn": "5217", "sn_src": "col", "doi": "TH", "vt": "TH"}, {"id": 44, "tl": "TL-044", "loai": "TSCĐ", "ma": "000145635", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5315)", "sn": "5315", "sn_src": "col", "doi": "TH", "vt": "TH"}, {"id": 45, "tl": "TL-045", "loai": "TSCĐ", "ma": "000146549", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5316)", "sn": "5316", "sn_src": "col", "doi": "TH", "vt": "TH"}, {"id": 46, "tl": "TL-046", "loai": "TSCĐ", "ma": "000146258", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5313)", "sn": "5313", "sn_src": "col", "doi": "TH", "vt": "TH"}, {"id": 47, "tl": "TL-047", "loai": "TSCĐ", "ma": "000146309", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5314)", "sn": "5314", "sn_src": "col", "doi": "TH", "vt": "TH"}, {"id": 48, "tl": "TL-048", "loai": "TSCĐ", "ma": "000690485", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Điều hòa Panasonic 12000BTU", "sn": "", "sn_src": "", "doi": "TH", "vt": "TH"}, {"id": 49, "tl": "TL-049", "loai": "TSCĐ", "ma": "000690488", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Điều hòa Panasonic 18000BTU", "sn": "", "sn_src": "", "doi": "TH", "vt": "TH"}, {"id": 50, "tl": "TL-050", "loai": "TSCĐ", "ma": "000145880", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy ĐHKK Panasonic - 2 cục", "sn": "", "sn_src": "", "doi": "QLT", "vt": "QLT"}, {"id": 51, "tl": "TL-051", "loai": "TSCĐ", "ma": "000145838", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP (5212)", "sn": "5212", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 52, "tl": "TL-052", "loai": "TSCĐ", "ma": "000146355", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Panasonic 2.0 HP, công suất: 18.000BTU/h, Model: CU/CS KC18QKH-8 (Tem TS: 8647)", "sn": "8647", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 53, "tl": "TL-053", "loai": "TSCĐ", "ma": "000123759", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Thiết bị chuyên dùng & Khác", "ten": "May lanh panasonic CU/CS-KC18QKH", "sn": "", "sn_src": "", "doi": "TT", "vt": "TT"}, {"id": 54, "tl": "TL-054", "loai": "TSCĐ", "ma": "000752044", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 1.5HP", "sn": "", "sn_src": "", "doi": "TT", "vt": "TT"}, {"id": 55, "tl": "TL-055", "loai": "TSCĐ", "ma": "000121139", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy điều hòa không khí (12491) Reetech 1.5HP", "sn": "12491", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 56, "tl": "TL-056", "loai": "TSCĐ", "ma": "000121750", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy điều hòa không khí (7622) Reetech 1.5HP", "sn": "7622", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 57, "tl": "TL-057", "loai": "TSCĐ", "ma": "000121095", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy điều hòa không khí (7623) Reetech 1.5HP", "sn": "7623", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 58, "tl": "TL-058", "loai": "TSCĐ", "ma": "000121104", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy điều hòa không khí-KC18PKH (01227) Reetech 1.5HP", "sn": "01227", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 59, "tl": "TL-059", "loai": "TSCĐ", "ma": "000146103", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5319)", "sn": "5319", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 60, "tl": "TL-060", "loai": "TSCĐ", "ma": "000146552", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5317)", "sn": "5317", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 61, "tl": "TL-061", "loai": "TSCĐ", "ma": "000146006", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin 2HP FTN50JXV1V/RN50CJXV1V (5320)", "sn": "5320", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 62, "tl": "TL-062", "loai": "TSCĐ", "ma": "000145832", "nhom": "3. Thiết bị gắn tường (Máy lạnh)", "cl": "Máy lạnh / ĐHKK", "ten": "Máy lạnh Daikin- model FTV50AX1V TEM TS 9897", "sn": "9897", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 63, "tl": "TL-063", "loai": "TSCĐ", "ma": "000145801", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Máy ảnh Sony Alpha A6000 (Tem TS: 752)", "sn": "752", "sn_src": "col", "doi": "GS", "vt": "Để trống cột đội ở file 506"}, {"id": 64, "tl": "TL-064", "loai": "TSCĐ", "ma": "000145834", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Máy chiếu", "ten": "Máy chiếu Panasonic PT-VX400TEA", "sn": "", "sn_src": "", "doi": "TH", "vt": "Để trống cột đội ở file 506"}, {"id": 65, "tl": "TL-065", "loai": "TSCĐ", "ma": "000766718", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Máy chiếu", "ten": "Máy chiếu Hitachi CP-X3042WN (Dây HDMI; Dây VGA; Công lắp, dây điện, nẹp, cài đặt kết nối âm thanh, hình ảnh)", "sn": "", "sn_src": "", "doi": "TH", "vt": "Để trống cột đội ở file 506"}, {"id": 66, "tl": "TL-066", "loai": "TSCĐ", "ma": "000146541", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy Photocopy", "ten": "Máy Photo KTS hiệu Sharp MX-M452N /35601", "sn": "35601", "sn_src": "col", "doi": "TT", "vt": "Để trống cột đội ở file 506"}, {"id": 67, "tl": "TL-067", "loai": "TSCĐ", "ma": "000146600", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy Photocopy", "ten": "Máy Photocopy Ricoh MP 2001L (5200)", "sn": "5200", "sn_src": "col", "doi": "TT", "vt": "Để trống cột đội ở file 506"}, {"id": 68, "tl": "TL-068", "loai": "TSCĐ", "ma": "000146492", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy Photocopy", "ten": "Máy Photocopy Ricoh MP 2001L (35600  )", "sn": "35600", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 69, "tl": "TL-069", "loai": "TSCĐ", "ma": "000145628", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d - 36598", "sn": "36598", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 70, "tl": "TL-070", "loai": "TSCĐ", "ma": "000146290", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser A4 HP LaserJet Pro400 M401 dne  (7160)", "sn": "7160", "sn_src": "col", "doi": "QLT", "vt": "QLT"}, {"id": 71, "tl": "TL-071", "loai": "TSCĐ", "ma": "000146593", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser A4 HP LaserJet Pro400 M401 dne  (7166)", "sn": "7166", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 72, "tl": "TL-072", "loai": "TSCĐ", "ma": "000146598", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser A4 HP LaserJet Pro400 M401 dne  (7167)", "sn": "7167", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 73, "tl": "TL-073", "loai": "TSCĐ", "ma": "000146381", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3112", "sn": "3112", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 74, "tl": "TL-074", "loai": "TSCĐ", "ma": "000146240", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d - 36599", "sn": "36599", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 75, "tl": "TL-075", "loai": "TSCĐ", "ma": "000146516", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3102", "sn": "3102", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 76, "tl": "TL-076", "loai": "TSCĐ", "ma": "000146179", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3105", "sn": "3105", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 77, "tl": "TL-077", "loai": "TSCĐ", "ma": "000146387", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3106", "sn": "3106", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 78, "tl": "TL-078", "loai": "TSCĐ", "ma": "000146479", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3107", "sn": "3107", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 79, "tl": "TL-079", "loai": "TSCĐ", "ma": "000146556", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3109", "sn": "3109", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 80, "tl": "TL-080", "loai": "TSCĐ", "ma": "000146332", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in laser HP P400 M401d – 3110", "sn": "3110", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 81, "tl": "TL-081", "loai": "TSCĐ", "ma": "000146350", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser A4 HP LaserJet Pro400 M401 dne  (7162)", "sn": "7162", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 82, "tl": "TL-082", "loai": "TSCĐ", "ma": "000144507", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3019", "sn": "QV985av3019", "sn_src": "col", "doi": "GS", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 83, "tl": "TL-083", "loai": "TSCĐ", "ma": "000144508", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "Bộ máy vi tính HP Compaq pro 6300 QV985av3020", "sn": "QV985av3020", "sn_src": "col", "doi": "GS", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 84, "tl": "TL-084", "loai": "TSCĐ", "ma": "000144628", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "máy trạm HP PRODESK 600 KHONG MAN HINH TEM TS(6130)", "sn": "6130", "sn_src": "col", "doi": "GS", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 85, "tl": "TL-085", "loai": "TSCĐ", "ma": "000146245", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Máy phát hiện và cảnh báo phóng xạ Thermo scientific RadEye PRD(13372)", "sn": "13372", "sn_src": "col", "doi": "TT", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 86, "tl": "TL-086", "loai": "CCDC", "ma": "000179568", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2585", "sn": "2585", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 87, "tl": "TL-087", "loai": "CCDC", "ma": "000179526", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2586", "sn": "2586", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 88, "tl": "TL-088", "loai": "CCDC", "ma": "000179520", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2587", "sn": "2587", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 89, "tl": "TL-089", "loai": "CCDC", "ma": "000179576", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2588", "sn": "2588", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 90, "tl": "TL-090", "loai": "CCDC", "ma": "000179584", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2589 ( màn hình máy tính HP Prodisplay)", "sn": "2589", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 91, "tl": "TL-091", "loai": "CCDC", "ma": "000179529", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2569 (màn hình máy tính HP ProDisplay)", "sn": "2569", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 92, "tl": "TL-092", "loai": "CCDC", "ma": "000179540", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính SamSung 21.5” LED 4287", "sn": "4287", "sn_src": "name", "doi": "TH", "vt": "TH"}, {"id": 93, "tl": "TL-093", "loai": "CCDC", "ma": "000179543", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 2572", "sn": "2572", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 94, "tl": "TL-094", "loai": "CCDC", "ma": "000179533", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 2573", "sn": "2573", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 95, "tl": "TL-095", "loai": "CCDC", "ma": "000179556", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 2574", "sn": "2574", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 96, "tl": "TL-096", "loai": "CCDC", "ma": "000179514", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 2575", "sn": "2575", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 97, "tl": "TL-097", "loai": "CCDC", "ma": "000179497", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2576", "sn": "2576", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 98, "tl": "TL-098", "loai": "CCDC", "ma": "000179563", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2577", "sn": "2577", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 99, "tl": "TL-099", "loai": "CCDC", "ma": "000179510", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2578", "sn": "2578", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 100, "tl": "TL-100", "loai": "CCDC", "ma": "000179567", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2579", "sn": "2579", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 101, "tl": "TL-101", "loai": "CCDC", "ma": "000179508", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2580", "sn": "2580", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 102, "tl": "TL-102", "loai": "CCDC", "ma": "000179487", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2581", "sn": "2581", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 103, "tl": "TL-103", "loai": "CCDC", "ma": "000179572", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2582", "sn": "2582", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 104, "tl": "TL-104", "loai": "CCDC", "ma": "000179530", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2583", "sn": "2583", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 105, "tl": "TL-105", "loai": "CCDC", "ma": "000179569", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính Acer Model K242HL LED 24\" 2584", "sn": "2584", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 106, "tl": "TL-106", "loai": "CCDC", "ma": "000179578", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính SamSung 21.5” LED 4251", "sn": "4251", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 107, "tl": "TL-107", "loai": "CCDC", "ma": "000179557", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính SamSung 21.5” LED 4256", "sn": "4256", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 108, "tl": "TL-108", "loai": "CCDC", "ma": "000179577", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính SamSung 21.5” LED 4257", "sn": "4257", "sn_src": "name", "doi": "TT", "vt": "TT"}, {"id": 109, "tl": "TL-109", "loai": "CCDC", "ma": "000180335", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Thiết bị Smart Wireless", "sn": "", "sn_src": "", "doi": "GS", "vt": "GS"}, {"id": 110, "tl": "TL-110", "loai": "CCDC", "ma": "000180807", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Máy đọc mã vạch Gryphon 1 GD4430, 2D (2492)", "sn": "2492", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 111, "tl": "TL-111", "loai": "CCDC", "ma": "000180900", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "UPS CHO MÁY TRẠM 1KVA-HUYNDAI-HD  TEM TS(6153)", "sn": "6153", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 112, "tl": "TL-112", "loai": "CCDC", "ma": "000697157", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "UPS CHO MÁY TRẠM: HUYNDAI HD-500VA - 8721", "sn": "8721", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 113, "tl": "TL-113", "loai": "CCDC", "ma": "000179712", "nhom": "4. Thiết bị chuyên dùng & PCCC", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Bình  CO2-PCCC", "sn": "", "sn_src": "", "doi": "GS", "vt": "GS"}, {"id": 114, "tl": "TL-114", "loai": "CCDC", "ma": "000180890", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Ổ đĩa cứng Server", "ten": "Ổ đĩa cứng IBM 145GB, FRU 42D0633 cho server IBM X3500M2", "sn": "", "sn_src": "", "doi": "TH", "vt": "TH"}, {"id": 115, "tl": "TL-115", "loai": "CCDC", "ma": "000180894", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Ổ đĩa cứng Server", "ten": "Ổ đĩa cứng IBM 73GB, FRU 39R7308 cho server IBM X346", "sn": "", "sn_src": "", "doi": "TH", "vt": "TH"}, {"id": 116, "tl": "TL-116", "loai": "CCDC", "ma": "000180908", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Ổ đĩa cứng Server", "ten": "Ổ đĩa cứng IBM 73GB, FRU 39R7308 cho server IBM X346", "sn": "", "sn_src": "", "doi": "TH", "vt": "TH"}, {"id": 117, "tl": "TL-117", "loai": "CCDC", "ma": "000180936", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Ổ đĩa cứng Server", "ten": "Ổ đĩa cứng IBM 73GB, FRU 39R7308 cho server IBM X346", "sn": "", "sn_src": "", "doi": "TH", "vt": "TH"}, {"id": 118, "tl": "TL-118", "loai": "CCDC", "ma": "000180884", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in A4: HP Laser Jetpro400 M401dn Tem TS(6181)", "sn": "6181", "sn_src": "col", "doi": "TH", "vt": "TH"}, {"id": 119, "tl": "TL-119", "loai": "CCDC", "ma": "000180792", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser HP M401dn -12161", "sn": "12161", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 120, "tl": "TL-120", "loai": "CCDC", "ma": "000180738", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser HP M401dn -12163", "sn": "12163", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 121, "tl": "TL-121", "loai": "CCDC", "ma": "000180749", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in Laser HP M401dn -12164", "sn": "12164", "sn_src": "col", "doi": "TT", "vt": "TT"}, {"id": 122, "tl": "TL-122", "loai": "CCDC", "ma": "", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Máy in laser A4", "ten": "Máy in khổ A4: FuJi Xerox P365d: MTS: 11553", "sn": "11553", "sn_src": "name", "doi": "QLT", "vt": "QLT"}, {"id": 123, "tl": "TL-123", "loai": "CCDC", "ma": "000180756", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Máy fax Panasonic KXFL612CX (5225)", "sn": "5225", "sn_src": "col", "doi": "GS", "vt": "GS"}, {"id": 124, "tl": "TL-124", "loai": "CCDC", "ma": "000179582", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Màn hình máy tính rời", "ten": "Màn hình máy tính SamSung 21.5” LED 4240", "sn": "4240", "sn_src": "name", "doi": "GS", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 125, "tl": "TL-125", "loai": "CCDC", "ma": "000180363", "nhom": "2. Thiết bị văn phòng & Phụ trợ", "cl": "Thiết bị chuyên dùng & Khác", "ten": "Máy nước uống nóng lạnh hiệu ALASKA", "sn": "", "sn_src": "", "doi": "GS", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 126, "tl": "TL-126", "loai": "CCDC", "ma": "000180932", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "UPS CHO MÁY TRẠM 1KVA-HUYNDAI-HD  TEM TS(6150)", "sn": "6150", "sn_src": "col", "doi": "QLT", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 127, "tl": "TL-127", "loai": "CCDC", "ma": "000180899", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "UPS CHO MÁY TRẠM 1KVA-HUYNDAI-HD  TEM TS(6151)", "sn": "6151", "sn_src": "col", "doi": "QLT", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}, {"id": 128, "tl": "TL-128", "loai": "CCDC", "ma": "000180920", "nhom": "1. Thiết bị CNTT & Lưu trữ", "cl": "Máy vi tính để bàn / Máy trạm", "ten": "UPS CHO MÁY TRẠM 1KVA-HUYNDAI-HD  TEM TS(6171)", "sn": "6171", "sn_src": "col", "doi": "QLT", "vt": "Không có trong file 506 (bổ sung sau) đề xuất TL đợt 2/2026"}];
+const STORAGE_KEY = 'hqkv4_thanhly_2026_state_v1';
+
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+let currentTeam = 'ALL';
+let currentStatus = 'ALL';
+let searchQuery = '';
+let html5QrScanner = null;
+let lastMatchedId = null;
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateStats();
+}
+
+function removeVietnameseTones(str) {
+  return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+}
+
+function updateStats() {
+  const total = ASSETS.length;
+  let checked = 0;
+  ASSETS.forEach(a => {
+    if (state[a.id] && state[a.id].done) checked++;
+  });
+  document.getElementById('counterBadge').textContent = `${checked} / ${total}`;
+  document.getElementById('checkCnt').textContent = checked;
+  document.getElementById('uncheckCnt').textContent = total - checked;
+  document.getElementById('progressFill').style.width = `${(checked / total) * 100}%`;
+}
+
+function toggleCheck(id) {
+  if (!state[id]) state[id] = {};
+  state[id].done = !state[id].done;
+  if (state[id].done) {
+    const now = new Date();
+    state[id].time = now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+  }
+  saveState();
+  render();
+}
+
+function editNote(id) {
+  if (!state[id]) state[id] = {};
+  const cur = state[id].note || '';
+  const next = prompt('Ghi chú hiện trạng (vd: Mất tem gốc, đã xóa dữ liệu, đang ở kho...):', cur);
+  if (next !== null) {
+    state[id].note = next.trim();
+    saveState();
+    render();
+  }
+}
+
+/**
+ * Smart QR parser: extracts exact Asset Code (Mã TS 9 digits or without leading zeros),
+ * Serial / Tem TS, or TL-xxx from any QR payload (URL, JSON, key-value text, or raw code).
+ */
+function extractAssetCodeFromQr(rawText) {
+  const raw = (rawText || '').trim();
+  if (!raw) return { query: '', matchedAsset: null };
+
+  const rawLower = raw.toLowerCase();
+
+  // 1. Direct match against known Mã TS (full 9-digit or stripped leading zeros) or Serial
+  for (const a of ASSETS) {
+    if (a.ma) {
+      const maNoZero = a.ma.replace(/^0+/, '');
+      if (raw.includes(a.ma) || (maNoZero.length >= 5 && raw.includes(maNoZero))) {
+        return { query: a.ma, matchedAsset: a };
+      }
+    }
+  }
+
+  // 2. Check if QR contains any known Serial / Tem TS (e.g., QV985av3007, 5398, 12161...)
+  for (const a of ASSETS) {
+    if (a.sn && a.sn.length >= 4) {
+      const snLower = a.sn.toLowerCase();
+      // Match whole token or boundary
+      const regex = new RegExp(`(^|[^0-9a-zA-Z])${snLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^0-9a-zA-Z])`, 'i');
+      if (regex.test(raw)) {
+        return { query: a.sn, matchedAsset: a };
+      }
+    }
+  }
+
+  // 3. Check if QR contains TL-xxx format
+  const tlMatch = raw.match(/TL[-\s]?0*(\d{1,3})/i);
+  if (tlMatch) {
+    const num = parseInt(tlMatch[1], 10);
+    const found = ASSETS.find(x => x.id === num);
+    if (found) return { query: found.tl, matchedAsset: found };
+  }
+
+  // 4. Check for 9-digit asset code pattern (e.g. 000144661) or 6-9 digit number in URL/text
+  const nineDigit = raw.match(/\b(0{2,3}\d{6})\b/);
+  if (nineDigit) {
+    return { query: nineDigit[1], matchedAsset: null };
+  }
+
+  const digitsMatch = raw.match(/\b(\d{4,9})\b/);
+  if (digitsMatch) {
+    return { query: digitsMatch[1], matchedAsset: null };
+  }
+
+  // Fallback: use trimmed first line
+  const firstLine = raw.split(/[\r\n|;,]+/)[0].trim();
+  return { query: firstLine.slice(0, 40), matchedAsset: null };
+}
+
+function applyDecodedQr(rawText) {
+  const parsed = extractAssetCodeFromQr(rawText);
+  // Reset team & status filters to ALL so result is guaranteed visible
+  currentTeam = 'ALL';
+  currentStatus = 'ALL';
+  document.querySelectorAll('#teamFilters .chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.team === 'ALL');
+  });
+  document.querySelectorAll('#statusTabs .stab').forEach(b => {
+    b.classList.toggle('active', b.dataset.status === 'ALL');
+  });
+
+  searchQuery = parsed.query;
+  const searchInput = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('clearBtn');
+  searchInput.value = searchQuery;
+  clearBtn.style.display = searchQuery ? 'flex' : 'none';
+  lastMatchedId = parsed.matchedAsset ? parsed.matchedAsset.id : null;
+
+  // Show QR banner with raw + extracted info
+  const banner = document.getElementById('qrBanner');
+  const bannerText = document.getElementById('qrBannerText');
+  if (parsed.matchedAsset) {
+    bannerText.innerHTML = `✅ Quét QR khớp ngay: <code>${parsed.matchedAsset.tl}</code> (Mã: <code>${parsed.matchedAsset.ma || parsed.matchedAsset.sn}</code>)`;
+  } else {
+    bannerText.innerHTML = `🔍 Đã đọc QR: <code>${rawText.length > 55 ? rawText.slice(0, 55) + '...' : rawText}</code> → Tìm: <code>${searchQuery}</code>`;
+  }
+  banner.style.display = 'flex';
+
+  render();
+}
+
+function hideQrBanner() {
+  document.getElementById('qrBanner').style.display = 'none';
+}
+
+// --- CAMERA QR SCANNER ---
+function openCameraScanner() {
+  const modal = document.getElementById('qrModal');
+  const statusEl = document.getElementById('scannerStatus');
+  modal.style.display = 'flex';
+  statusEl.textContent = 'Đang khởi động camera... Đưa mã QR tài sản vào khung hình.';
+
+  if (typeof Html5Qrcode === 'undefined') {
+    statusEl.textContent = 'Không tải được thư viện camera. Bạn hãy bấm "Chọn ảnh QR từ thư viện" bên dưới.';
+    return;
+  }
+
+  html5QrScanner = new Html5Qrcode("qr-reader");
+  const config = { fps: 12, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 };
+
+  html5QrScanner.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      // Vibrate briefly if supported
+      if (navigator.vibrate) navigator.vibrate(100);
+      closeCameraScanner();
+      applyDecodedQr(decodedText);
+    },
+    () => {}
+  ).catch(err => {
+    statusEl.innerHTML = 'Không mở được camera trực tiếp (do quyền truy cập hoặc trình duyệt).<br><b>Hãy bấm nút "Chọn ảnh QR từ thư viện / Chụp ảnh" bên dưới!</b>';
+  });
+}
+
+function closeCameraScanner() {
+  const modal = document.getElementById('qrModal');
+  modal.style.display = 'none';
+  if (html5QrScanner) {
+    html5QrScanner.stop().then(() => {
+      html5QrScanner.clear();
+      html5QrScanner = null;
+    }).catch(() => {
+      html5QrScanner = null;
+    });
+  }
+}
+
+// --- IMAGE UPLOAD QR DECODER (Dual Engine: Native BarcodeDetector + jsQR + Html5Qrcode fallback) ---
+function triggerImageUpload() {
+  const fileInput = document.getElementById('qrFileInput');
+  fileInput.value = '';
+  fileInput.click();
+}
+
+async function handleQrImageFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  // Engine 1: Try Canvas + jsQR (works 100% offline & handles screenshots/saved photos reliably)
+  try {
+    const decoded = await decodeImageWithJsQrOrNative(file);
+    if (decoded) {
+      applyDecodedQr(decoded);
+      return;
+    }
+  } catch (e) {
+    console.warn("jsQR/Native decode error:", e);
+  }
+
+  // Engine 2: Fallback to Html5Qrcode scanFile
+  if (typeof Html5Qrcode !== 'undefined') {
+    try {
+      const fileScanner = new Html5Qrcode("qr-file-reader-hidden");
+      const decodedText = await fileScanner.scanFile(file, false);
+      fileScanner.clear();
+      if (decodedText) {
+        applyDecodedQr(decodedText);
+        return;
+      }
+    } catch (err) {
+      console.warn("Html5Qrcode scanFile error:", err);
+    }
+  }
+
+  alert("Không tìm thấy mã QR rõ nét trong bức ảnh này. Bạn hãy thử cắt gọn (crop) gần vùng mã QR hơn hoặc chụp lại rõ nét hơn nhé!");
+}
+
+function decodeImageWithJsQrOrNative(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      URL.revokeObjectURL(url);
+
+      // Try native BarcodeDetector first if available on modern iOS/Android
+      if ('BarcodeDetector' in window) {
+        try {
+          const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39'] });
+          const barcodes = await detector.detect(img);
+          if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+            resolve(barcodes[0].rawValue);
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Try jsQR at multiple scales for high-res phone photos
+      if (typeof jsQR !== 'undefined') {
+        const scales = [1000, 1600, 600];
+        for (const maxDim of scales) {
+          const canvas = document.createElement('canvas');
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const imageData = ctx.getImageData(0, 0, w, h);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth"
+          });
+          if (code && code.data) {
+            resolve(code.data);
+            return;
+          }
+        }
+      }
+      resolve(null);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
+function render() {
+  const container = document.getElementById('assetList');
+  const qNorm = removeVietnameseTones(searchQuery.trim());
+  
+  const filtered = ASSETS.filter(a => {
+    if (currentTeam !== 'ALL' && a.doi !== currentTeam) return false;
+    const isDone = !!(state[a.id] && state[a.id].done);
+    if (currentStatus === 'CHECKED' && !isDone) return false;
+    if (currentStatus === 'UNCHECKED' && isDone) return false;
+    if (qNorm) {
+      const maNoZero = (a.ma || '').replace(/^0+/, '');
+      const hay = removeVietnameseTones(`${a.tl} ${a.ma} ${maNoZero} ${a.sn} ${a.ten} ${a.vt} ${a.cl}`);
+      const terms = qNorm.split(/\s+/);
+      for (let t of terms) {
+        if (!hay.includes(t)) return false;
+      }
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty">Không tìm thấy tài sản phù hợp.<br>Thử xóa bộ lọc, quét lại QR hoặc gõ 4 số cuối tem/serial.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(a => {
+    const st = state[a.id] || {};
+    const isDone = !!st.done;
+    const isHighlight = (lastMatchedId === a.id);
+    const snHtml = a.sn ? `<span class="meta-pill sn-pill">Tem/SN: ${a.sn}</span>` : '';
+    const maHtml = a.ma ? `<span class="meta-pill">Mã TS: ${a.ma}</span>` : `<span class="meta-pill">Trống mã TS</span>`;
+    const vtSub = (a.vt && a.vt !== a.doi && !a.vt.startsWith('Để trống')) ? ` • ${a.vt}` : '';
+    const noteHtml = st.note ? `<div class="note-text">📝 ${st.note}</div>` : '';
+    const btnLabel = isDone ? `✅ Đã dán tem (${st.time || 'Xong'})` : `☐ Đánh dấu đã dán tem`;
+    
+    return `
+      <div class="card ${isDone ? 'checked' : ''} ${isHighlight ? 'highlight-match' : ''}">
+        <div class="card-top">
+          <span class="tl-badge">${a.tl} <span style="font-size:12px;font-weight:600;color:#64748b;">(${a.loai})</span></span>
+          <span class="team-tag team-${a.doi}">${a.doi}${vtSub}</span>
+        </div>
+        <div class="meta-row">
+          ${maHtml}
+          ${snHtml}
+        </div>
+        <div class="asset-name">${a.ten}</div>
+        <div class="card-actions">
+          <button class="check-btn" onclick="toggleCheck(${a.id})">${btnLabel}</button>
+          <button class="note-btn" onclick="editNote(${a.id})">📝 Ghi chú</button>
+        </div>
+        ${noteHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+const searchInput = document.getElementById('searchInput');
+const clearBtn = document.getElementById('clearBtn');
+
+searchInput.addEventListener('input', e => {
+  searchQuery = e.target.value;
+  lastMatchedId = null;
+  clearBtn.style.display = searchQuery ? 'flex' : 'none';
+  render();
+});
+
+clearBtn.addEventListener('click', () => {
+  searchQuery = '';
+  lastMatchedId = null;
+  searchInput.value = '';
+  clearBtn.style.display = 'none';
+  hideQrBanner();
+  searchInput.focus();
+  render();
+});
+
+document.querySelectorAll('#teamFilters .chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#teamFilters .chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTeam = btn.dataset.team;
+    render();
+  });
+});
+
+document.querySelectorAll('#statusTabs .stab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#statusTabs .stab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentStatus = btn.dataset.status;
+    render();
+  });
+});
+
+function copyReport() {
+  const teams = ['TT', 'TH', 'GS', 'QLT'];
+  let lines = ['BÁO CÁO NHANH TIẾN ĐỘ DÁN TEM TÀI SẢN THANH LÝ 2026:'];
+  let totalDone = 0;
+  teams.forEach(t => {
+    const list = ASSETS.filter(a => a.doi === t);
+    const done = list.filter(a => state[a.id] && state[a.id].done).length;
+    totalDone += done;
+    lines.push(`- Đội ${t}: ${done}/${list.length} tài sản`);
+  });
+  lines.push(`=> TỔNG CỘNG: ${totalDone}/128 tài sản đã kiểm kê & dán tem.`);
+  const text = lines.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => alert('Đã sao chép báo cáo tiến độ vào bộ nhớ tạm!'));
+  } else {
+    prompt('Sao chép nội dung dưới đây:', text);
+  }
+}
+
+function exportCSV() {
+  let csv = '\uFEFFSTT_TL,Loai,Ma_TS,Tem_SN,Doi,Ten_Tai_San,Trang_Thai_Dan_Tem,Gio_Kiem_Ke,Ghi_Chu\n';
+  ASSETS.forEach(a => {
+    const st = state[a.id] || {};
+    const statusText = st.done ? 'Đã dán tem' : 'Chưa dán';
+    const row = [
+      a.tl,
+      a.loai,
+      `"${a.ma}"`,
+      `"${a.sn}"`,
+      a.doi,
+      `"${a.ten.replace(/"/g, '""')}"`,
+      statusText,
+      st.time || '',
+      `"${(st.note || '').replace(/"/g, '""')}"`
+    ].join(',');
+    csv += row + '\n';
+  });
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'Ket_Qua_Kiem_Ke_Dan_Tem_KV4_2026.csv';
+  link.click();
+}
+
+updateStats();
+render();
+</script>
+</body>
+</html>
