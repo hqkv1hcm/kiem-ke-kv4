@@ -551,52 +551,41 @@ function extractAssetCodeFromQr(rawText) {
   const raw = (rawText || '').trim();
   if (!raw) return { query: '', matchedAsset: null };
 
-  const rawLower = raw.toLowerCase();
-
-  // 1. Direct match against known Mã TS (full 9-digit or stripped leading zeros) or Serial
-  for (const a of ASSETS) {
-    if (a.ma) {
-      const maNoZero = a.ma.replace(/^0+/, '');
-      if (raw.includes(a.ma) || (maNoZero.length >= 5 && raw.includes(maNoZero))) {
-        return { query: a.ma, matchedAsset: a };
-      }
-    }
+  // 1. Ưu tiên tuyệt đối: Lọc chính xác chuỗi mã bắt đầu bằng 000... (kể cả khi dính tiền tố QLTS_000... hoặc nằm trong đoạn văn bản dài)
+  const code000Match = raw.match(/(?:^|[^0-9])(000\d{4,8})(?:[^0-9]|$)/);
+  if (code000Match) {
+    const extractedCode = code000Match[1];
+    const matched = ASSETS.find(a => a.ma === extractedCode || (a.ma && a.ma.includes(extractedCode)));
+    return { query: extractedCode, matchedAsset: matched || null };
   }
 
-  // 2. Check if QR contains any known Serial / Tem TS (e.g., QV985av3007, 5398, 12161...)
+  // 2. Nếu QR không chứa mã 000..., tìm theo Serial / Tem TS khớp trong 128 tài sản
   for (const a of ASSETS) {
     if (a.sn && a.sn.length >= 4) {
       const snLower = a.sn.toLowerCase();
-      // Match whole token or boundary
       const regex = new RegExp(`(^|[^0-9a-zA-Z])${snLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^0-9a-zA-Z])`, 'i');
       if (regex.test(raw)) {
-        return { query: a.sn, matchedAsset: a };
+        return { query: a.ma ? a.ma : a.sn, matchedAsset: a };
       }
     }
   }
 
-  // 3. Check if QR contains TL-xxx format
+  // 3. Kiểm tra định dạng TL-xxx
   const tlMatch = raw.match(/TL[-\s]?0*(\d{1,3})/i);
   if (tlMatch) {
     const num = parseInt(tlMatch[1], 10);
     const found = ASSETS.find(x => x.id === num);
-    if (found) return { query: found.tl, matchedAsset: found };
+    if (found) return { query: found.ma ? found.ma : found.tl, matchedAsset: found };
   }
 
-  // 4. Check for 9-digit asset code pattern (e.g. 000144661) or 6-9 digit number in URL/text
-  const nineDigit = raw.match(/\b(0{2,3}\d{6})\b/);
-  if (nineDigit) {
-    return { query: nineDigit[1], matchedAsset: null };
-  }
-
-  const digitsMatch = raw.match(/\b(\d{4,9})\b/);
+  // 4. Fallback: Bắt cụm 6-9 chữ số nếu có
+  const digitsMatch = raw.match(/(?:^|[^0-9])(\d{6,9})(?:[^0-9]|$)/);
   if (digitsMatch) {
     return { query: digitsMatch[1], matchedAsset: null };
   }
 
-  // Fallback: use trimmed first line
   const firstLine = raw.split(/[\r\n|;,]+/)[0].trim();
-  return { query: firstLine.slice(0, 40), matchedAsset: null };
+  return { query: firstLine.slice(0, 30), matchedAsset: null };
 }
 
 function applyDecodedQr(rawText) {
@@ -624,7 +613,7 @@ function applyDecodedQr(rawText) {
   if (parsed.matchedAsset) {
     bannerText.innerHTML = `✅ Quét QR khớp ngay: <code>${parsed.matchedAsset.tl}</code> (Mã: <code>${parsed.matchedAsset.ma || parsed.matchedAsset.sn}</code>)`;
   } else {
-    bannerText.innerHTML = `🔍 Đã đọc QR: <code>${rawText.length > 55 ? rawText.slice(0, 55) + '...' : rawText}</code> → Tìm: <code>${searchQuery}</code>`;
+    bannerText.innerHTML = `🔍 Đã lọc mã từ QR: <code>${searchQuery}</code> (Không có trong DS 128 món)`;
   }
   banner.style.display = 'flex';
 
