@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Kiểm Kê Thanh Lý 2026 - HQKV4 (QR Tầm Xa v4)</title>
+<title>Kiểm Kê Thanh Lý 2026 - HQKV4 (Smooth QR v6)</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <style>
@@ -346,7 +346,7 @@
     font-size: 15px;
   }
 
-  /* Full-Field Long-Range QR Scanner Modal */
+  /* GPU-Accelerated Smooth QR Scanner Modal */
   .modal-overlay {
     position: fixed;
     inset: 0;
@@ -400,14 +400,16 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transform: translateZ(0);
+    will-change: transform;
+    transition: transform 0.18s ease-out;
   }
   .scan-frame-guide {
     position: absolute;
-    inset: 12% 10%;
-    border: 2px dashed rgba(56, 189, 248, 0.75);
+    inset: 14% 12%;
+    border: 2px solid rgba(56, 189, 248, 0.75);
     border-radius: 18px;
     pointer-events: none;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
   }
   .scan-line {
     position: absolute;
@@ -415,12 +417,7 @@
     right: 4%;
     height: 2px;
     background: #38bdf8;
-    box-shadow: 0 0 10px #38bdf8;
-    animation: scanMove 2.2s infinite ease-in-out;
-  }
-  @keyframes scanMove {
-    0%, 100% { top: 8%; }
-    50% { top: 92%; }
+    will-change: transform;
   }
   .camera-controls {
     background: #0f172a;
@@ -513,7 +510,7 @@
       <input type="text" id="searchInput" class="search-input" placeholder="Gõ Mã TS, Serial (vd: 5398) hoặc tên..." autocomplete="off">
       <button id="clearBtn" class="clear-btn" aria-label="Xóa">✕</button>
     </div>
-    <button class="qr-btn qr-cam-btn" onclick="openCameraScanner()" title="Quét QR tầm xa">📷 Quét QR</button>
+    <button class="qr-btn qr-cam-btn" onclick="openCameraScanner()" title="Quét QR mượt mà">📷 Quét QR</button>
     <button class="qr-btn qr-img-btn" onclick="triggerImageUpload()" title="Tải ảnh QR từ máy">🖼️ Ảnh QR</button>
     <input type="file" id="qrFileInput" accept="image/*" style="display:none" onchange="handleQrImageFile(event)">
   </div>
@@ -544,25 +541,25 @@
   <button class="action-btn btn-export" onclick="exportCSV()">⬇️ Xuất Excel (CSV)</button>
 </div>
 
-<!-- Full-Field Long-Range QR Scanner Modal -->
+<!-- GPU-Accelerated Smooth QR Scanner Modal -->
 <div class="modal-overlay" id="qrModal">
   <div class="modal-header">
-    <div>📷 Quét QR Toàn Khung <span class="engine-pill" id="engineBadge">Full HD</span></div>
+    <div>📷 Quét QR Tầm Xa <span class="engine-pill" id="engineBadge">60fps Mượt</span></div>
     <button class="modal-close" onclick="closeCameraScanner()">✕</button>
   </div>
   <div class="video-stage">
     <video id="nativeVideo" playsinline autoplay muted></video>
-    <div class="scan-frame-guide">
-      <div class="scan-line"></div>
+    <div class="scan-frame-guide" id="scanGuideBox">
+      <div class="scan-line" id="scanLineEl"></div>
     </div>
   </div>
   <div class="camera-controls">
-    <div class="zoom-row" id="zoomControlRow" style="display:none;">
+    <div class="zoom-row" id="zoomControlRow">
       <span style="font-size:12px;color:#94a3b8;font-weight:700;">Thu phóng:</span>
       <div class="zoom-presets" id="zoomButtons"></div>
       <button class="torch-btn" id="torchBtn" onclick="toggleTorch()">🔦 Đèn</button>
     </div>
-    <div class="modal-tip" id="scannerStatus">Quét toàn khung hình — Bấm 2x hoặc 3x nếu đứng xa tem QR.</div>
+    <div class="modal-tip" id="scannerStatus">Đưa mã QR vào khung hình (bấm 1.5x hoặc 2x nếu đứng xa).</div>
     <div class="modal-actions">
       <button class="modal-btn primary" onclick="closeCameraScanner(); triggerImageUpload();">🖼️ Chọn ảnh QR từ máy</button>
       <button class="modal-btn" onclick="closeCameraScanner()">Đóng</button>
@@ -582,12 +579,14 @@ let currentStatus = 'ALL';
 let searchQuery = '';
 let lastMatchedId = null;
 
-// Long-range camera state
+// Smooth camera state
 let mediaStream = null;
 let videoTrack = null;
 let scanLoopTimer = null;
 let isScanningActive = false;
 let torchOn = false;
+let currentZoom = 1;
+let supportsHardwareZoom = false;
 let offscreenCanvas = document.createElement('canvas');
 let offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
 
@@ -650,7 +649,8 @@ function extractAssetCodeFromQr(rawText) {
   for (const a of ASSETS) {
     if (a.sn && a.sn.length >= 4) {
       const snLower = a.sn.toLowerCase();
-      const regex = new RegExp(`(^|[^0-9a-zA-Z])${snLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^0-9a-zA-Z])`, 'i');
+      const escapedSn = snLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(^|[^0-9a-zA-Z])${escapedSn}($|[^0-9a-zA-Z])`, 'i');
       if (regex.test(raw)) {
         return { query: a.ma ? a.ma : a.sn, matchedAsset: a };
       }
@@ -709,7 +709,7 @@ function hideQrBanner() {
   document.getElementById('qrBanner').style.display = 'none';
 }
 
-// --- LONG-RANGE FULL-FRAME CAMERA QR SCANNER ---
+// --- SMOOTH 60FPS HARDWARE-ACCELERATED QR CAMERA SCANNER ---
 async function openCameraScanner() {
   const modal = document.getElementById('qrModal');
   const video = document.getElementById('nativeVideo');
@@ -717,20 +717,21 @@ async function openCameraScanner() {
   const engineBadge = document.getElementById('engineBadge');
   modal.style.display = 'flex';
   torchOn = false;
+  currentZoom = 1;
+  video.style.transform = 'translateZ(0) scale(1)';
 
   const hasNativeDetector = ('BarcodeDetector' in window);
-  engineBadge.textContent = hasNativeDetector ? 'Chip QR + Full HD' : 'Full HD 20fps';
-  statusEl.textContent = 'Đang bật camera độ phân giải cao & lấy nét tự động...';
+  engineBadge.textContent = hasNativeDetector ? '60fps Chip QR' : '720p Mượt';
+  statusEl.textContent = 'Đang mở camera...';
 
   try {
-    // Request Full HD stream + continuous autofocus
     const constraints = {
       audio: false,
       video: {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1920, min: 1280 },
-        height: { ideal: 1080, min: 720 },
-        focusMode: { ideal: 'continuous' }
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30, max: 60 }
       }
     };
 
@@ -738,12 +739,22 @@ async function openCameraScanner() {
     video.srcObject = mediaStream;
     await video.play();
 
+    const guideBox = document.getElementById('scanGuideBox');
+    const scanLineEl = document.getElementById('scanLineEl');
+    if (guideBox && scanLineEl && typeof scanLineEl.animate === 'function') {
+      const h = guideBox.clientHeight || 240;
+      scanLineEl.animate([
+        { transform: 'translate3d(0, 12px, 0)' },
+        { transform: `translate3d(0, ${Math.max(h - 16, 120)}px, 0)` }
+      ], { duration: 1800, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' });
+    }
+
     videoTrack = mediaStream.getVideoTracks()[0];
     setupCameraCapabilities(videoTrack);
 
     isScanningActive = true;
-    statusEl.textContent = 'Đưa mã QR vào vùng khung hình (chọn 2x / 3x nếu đứng xa).';
-    startDualScanLoop(video, hasNativeDetector);
+    statusEl.textContent = 'Đưa mã QR vào khung hình (bấm 1.5x hoặc 2x nếu đứng xa).';
+    startSmoothScanLoop(video, hasNativeDetector);
   } catch (err) {
     console.warn('Camera start failed:', err);
     statusEl.innerHTML = 'Không mở được camera trực tiếp (hãy kiểm tra quyền Camera của Safari/Chrome hoặc dùng link https://).<br><b>Bạn có thể bấm nút "Chọn ảnh QR từ máy" bên dưới!</b>';
@@ -751,52 +762,61 @@ async function openCameraScanner() {
 }
 
 function setupCameraCapabilities(track) {
-  const zoomRow = document.getElementById('zoomControlRow');
   const zoomBtnsContainer = document.getElementById('zoomButtons');
   const torchBtn = document.getElementById('torchBtn');
   zoomBtnsContainer.innerHTML = '';
-  zoomRow.style.display = 'none';
   torchBtn.style.display = 'none';
+  supportsHardwareZoom = false;
 
-  if (!track || typeof track.getCapabilities !== 'function') return;
-  const caps = track.getCapabilities();
+  let caps = {};
+  if (track && typeof track.getCapabilities === 'function') {
+    caps = track.getCapabilities() || {};
+  }
 
-  // Enable continuous focus explicitly if supported
   if (caps.focusMode && caps.focusMode.includes('continuous')) {
     track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
   }
 
-  // Setup Zoom preset buttons (1x, 1.5x, 2x, 3x) if hardware zoom is supported
-  if (caps.zoom) {
+  if (caps.zoom && caps.zoom.max > 1) {
+    supportsHardwareZoom = true;
     const minZ = caps.zoom.min || 1;
-    const maxZ = Math.min(caps.zoom.max || 1, 5);
-    const candidates = [1, 1.5, 2, 3].filter(z => z >= minZ && z <= maxZ);
-    if (candidates.length > 1) {
-      zoomRow.style.display = 'flex';
-      candidates.forEach((z, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'z-btn' + (idx === 0 ? ' active' : '');
-        btn.textContent = z + 'x';
-        btn.onclick = () => applyZoom(z, btn);
-        zoomBtnsContainer.appendChild(btn);
-      });
-    }
+    const maxZ = Math.min(caps.zoom.max, 4);
+    const candidates = [1, 1.5, 2, 2.5].filter(z => z >= minZ && z <= maxZ);
+    candidates.forEach((z, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'z-btn' + (idx === 0 ? ' active' : '');
+      btn.textContent = z + 'x';
+      btn.onclick = () => applyZoom(z, btn);
+      zoomBtnsContainer.appendChild(btn);
+    });
+  } else {
+    [1, 1.5, 2].forEach((z, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'z-btn' + (idx === 0 ? ' active' : '');
+      btn.textContent = z + 'x';
+      btn.onclick = () => applyZoom(z, btn);
+      zoomBtnsContainer.appendChild(btn);
+    });
   }
 
-  // Setup Flashlight / Torch button if supported
   if (caps.torch) {
-    zoomRow.style.display = 'flex';
     torchBtn.style.display = 'inline-block';
     torchBtn.classList.remove('on');
   }
 }
 
 function applyZoom(zoomLevel, activeBtn) {
-  if (!videoTrack) return;
-  videoTrack.applyConstraints({ advanced: [{ zoom: zoomLevel }] }).then(() => {
-    document.querySelectorAll('#zoomButtons .z-btn').forEach(b => b.classList.remove('active'));
-    if (activeBtn) activeBtn.classList.add('active');
-  }).catch(() => {});
+  currentZoom = zoomLevel;
+  const video = document.getElementById('nativeVideo');
+  document.querySelectorAll('#zoomButtons .z-btn').forEach(b => b.classList.remove('active'));
+  if (activeBtn) activeBtn.classList.add('active');
+
+  if (supportsHardwareZoom && videoTrack) {
+    videoTrack.applyConstraints({ advanced: [{ zoom: zoomLevel }] }).catch(() => {});
+    if (video) video.style.transform = 'translateZ(0) scale(1)';
+  } else if (video) {
+    video.style.transform = `translateZ(0) scale(${zoomLevel})`;
+  }
 }
 
 function toggleTorch() {
@@ -808,7 +828,7 @@ function toggleTorch() {
   }).catch(() => {});
 }
 
-function startDualScanLoop(video, hasNativeDetector) {
+function startSmoothScanLoop(video, hasNativeDetector) {
   let nativeDetector = null;
   if (hasNativeDetector) {
     try {
@@ -818,65 +838,66 @@ function startDualScanLoop(video, hasNativeDetector) {
     }
   }
 
-  let frameCounter = 0;
+  let isBusy = false;
 
-  const tick = async () => {
+  const scheduleNext = () => {
     if (!isScanningActive) return;
+    scanLoopTimer = setTimeout(runScanStep, 150);
+  };
 
-    if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
-      // 1. Hardware BarcodeDetector (runs directly on full-resolution video element, zero downscale loss)
-      if (nativeDetector) {
-        try {
+  const runScanStep = async () => {
+    if (!isScanningActive || isBusy) {
+      scheduleNext();
+      return;
+    }
+
+    if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+      isBusy = true;
+      try {
+        if (nativeDetector) {
           const results = await nativeDetector.detect(video);
           if (results && results.length > 0 && results[0].rawValue) {
+            isBusy = false;
             onScanSuccess(results[0].rawValue);
             return;
           }
-        } catch (e) {}
-      }
+        } else if (typeof jsQR !== 'undefined') {
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+          const cropRatio = (!supportsHardwareZoom && currentZoom > 1) ? (1 / currentZoom) : 0.72;
+          const sw = Math.round(vw * cropRatio);
+          const sh = Math.round(vh * cropRatio);
+          const sx = Math.round((vw - sw) / 2);
+          const sy = Math.round((vh - sh) / 2);
 
-      // 2. jsQR high-res full-frame + center-crop pass (handles devices without BarcodeDetector)
-      if (typeof jsQR !== 'undefined') {
-        frameCounter++;
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-
-        // Alternate between full frame (wide catch) and 2x center crop (distant small QR boost)
-        const useCenterCrop = (frameCounter % 2 === 0);
-        let sx = 0, sy = 0, sw = vw, sh = vh;
-        if (useCenterCrop) {
-          sw = Math.round(vw * 0.55);
-          sh = Math.round(vh * 0.55);
-          sx = Math.round((vw - sw) / 2);
-          sy = Math.round((vh - sh) / 2);
+          const targetW = Math.min(sw, 560);
+          const targetH = Math.round((sh * targetW) / sw);
+          if (offscreenCanvas.width !== targetW || offscreenCanvas.height !== targetH) {
+            offscreenCanvas.width = targetW;
+            offscreenCanvas.height = targetH;
+          }
+          offscreenCtx.drawImage(video, sx, sy, sw, sh, 0, 0, targetW, targetH);
+          const imgData = offscreenCtx.getImageData(0, 0, targetW, targetH);
+          const qr = jsQR(imgData.data, targetW, targetH, { inversionAttempts: 'dontInvert' });
+          if (qr && qr.data) {
+            isBusy = false;
+            onScanSuccess(qr.data);
+            return;
+          }
         }
-
-        const targetW = Math.min(sw, 960);
-        const targetH = Math.round((sh * targetW) / sw);
-        offscreenCanvas.width = targetW;
-        offscreenCanvas.height = targetH;
-        offscreenCtx.drawImage(video, sx, sy, sw, sh, 0, 0, targetW, targetH);
-
-        const imgData = offscreenCtx.getImageData(0, 0, targetW, targetH);
-        const qr = jsQR(imgData.data, targetW, targetH, { inversionAttempts: 'dontInvert' });
-        if (qr && qr.data) {
-          onScanSuccess(qr.data);
-          return;
-        }
-      }
+      } catch (e) {}
+      isBusy = false;
     }
 
-    if (isScanningActive) {
-      scanLoopTimer = setTimeout(tick, 50); // ~20 fps
-    }
+    scheduleNext();
   };
 
-  tick();
+  scheduleNext();
 }
 
 function onScanSuccess(decodedText) {
   if (!isScanningActive) return;
-  if (navigator.vibrate) navigator.vibrate(100);
+  if (navigator.vibrate) navigator.vibrate(90);
   closeCameraScanner();
   applyDecodedQr(decodedText);
 }
@@ -893,7 +914,10 @@ function closeCameraScanner() {
   }
   videoTrack = null;
   const video = document.getElementById('nativeVideo');
-  if (video) video.srcObject = null;
+  if (video) {
+    video.srcObject = null;
+    video.style.transform = 'translateZ(0) scale(1)';
+  }
   document.getElementById('qrModal').style.display = 'none';
 }
 
